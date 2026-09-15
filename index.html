@@ -577,6 +577,11 @@
   const RECIPIENT_ADDRESS = 'NQ739VXGMXJR8F712K5VSRJDEEEJV1531U61';
   const hubApi = new HubApi('https://hub.nimiq.com');
   
+  // Constantes para persistencia de sesión por 12 horas
+  const SESSION_KEY = 'nimiq_myindex_active_address';
+  const SESSION_TIME_KEY = 'nimiq_myindex_session_timestamp';
+  const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
   let userAddress = null;
   let selectedCategory = 'ALL';
   let selectedSubFilter = 'ALL';
@@ -633,6 +638,43 @@
       }
     }
   });
+
+  function saveSession(address) {
+    localStorage.setItem(SESSION_KEY, address);
+    localStorage.setItem(SESSION_TIME_KEY, Date.now().toString());
+  }
+
+  function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_TIME_KEY);
+    userAddress = null;
+    btnConnect.innerText = "Conectar Wallet";
+    btnDisconnect.style.display = 'none';
+    document.getElementById('userIdenticon').style.display = 'none';
+    renderHistoryItems([]);
+    pulseChart.data.labels = [];
+    pulseChart.data.datasets = [];
+    pulseChart.update();
+  }
+
+  function checkAndRestoreSession() {
+    const savedAddress = localStorage.getItem(SESSION_KEY);
+    const savedTimestamp = localStorage.getItem(SESSION_TIME_KEY);
+
+    if (savedAddress && savedTimestamp) {
+      const elapsedTime = Date.now() - parseInt(savedTimestamp, 10);
+      if (elapsedTime < TWELVE_HOURS_MS) {
+        userAddress = savedAddress;
+        btnConnect.innerText = `${userAddress.substring(0, 4)}...${userAddress.substring(userAddress.length - 4)}`;
+        btnDisconnect.style.display = 'inline-block';
+        renderIdenticon(userAddress);
+        fetchOnChainHistory();
+        return;
+      } else {
+        clearSession();
+      }
+    }
+  }
 
   function initCountries() {
     countrySelect.innerHTML = '';
@@ -765,6 +807,7 @@
     try {
       const option = await hubApi.chooseAddress({ appName: 'NIMIQ MyIndex' });
       userAddress = option.address;
+      saveSession(userAddress);
       btnConnect.innerText = `${userAddress.substring(0, 4)}...${userAddress.substring(userAddress.length - 4)}`;
       btnDisconnect.style.display = 'inline-block';
       renderIdenticon(userAddress);
@@ -774,14 +817,7 @@
   });
 
   btnDisconnect.addEventListener('click', () => {
-    userAddress = null;
-    btnConnect.innerText = "Conectar Wallet";
-    btnDisconnect.style.display = 'none';
-    document.getElementById('userIdenticon').style.display = 'none';
-    renderHistoryItems([]);
-    pulseChart.data.labels = [];
-    pulseChart.data.datasets = [];
-    pulseChart.update();
+    clearSession();
   });
 
   function renderIdenticon(addr) {
@@ -1134,6 +1170,7 @@
     initCountries();
     updateConverter();
     updateCalculations();
+    checkAndRestoreSession();
   }
 
   initMarket();
