@@ -21,7 +21,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="author" content="Fabio Alarte (@fabioalarte)">
   <meta name="application-name" content="NIMIQ MyIndex">
-  <title>NIMIQ MyIndex | Registro de Precios</title>
+  <meta name="description" content="Registro de precios, poder adquisitivo e inflación comparada local vs cripto en la blockchain de Nimiq.">
+  <title>NIMIQ MyIndex | Registro de Precios e Inflación</title>
+
+  <!-- Favicon para SEO y WebApp -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,25 95,75 50,95 5,75 5,25' fill='%23e9b213'/><text x='50' y='62' font-size='40' font-weight='bold' text-anchor='middle' fill='%23000'>MX</text></svg>">
+  <link rel="alternate icon" type="image/png" href="https://nimiq.com/favicon.ico">
 
   <!-- Tipografías Oficiales Nimiq -->
   <link href="https://fonts.googleapis.com/css?family=Muli:400,600,700|Fira+Mono:400,600&display=swap" rel="stylesheet">
@@ -43,6 +48,7 @@
       --text-main: #ffffff;
       --text-muted: #8c9ba5;
       --nq-green: #2ebd85;
+      --fiat-line-color: #00bcd4;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -238,6 +244,74 @@
       gap: 8px;
     }
     .form-field label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
+
+    .category-chips-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .category-chips-bar::-webkit-scrollbar { display: none; }
+
+    .cat-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cat-chip:hover {
+      background: rgba(233, 178, 19, 0.1);
+      color: var(--text-main);
+      border-color: var(--accent-color);
+    }
+    .cat-chip.active {
+      background: var(--accent-color);
+      color: #000;
+      border-color: var(--accent-color);
+      font-weight: 800;
+    }
+
+    .unit-chips-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .unit-chips-bar::-webkit-scrollbar { display: none; }
+
+    .unit-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Fira Mono', monospace;
+      white-space: nowrap;
+    }
+    .unit-chip:hover {
+      border-color: var(--accent-color);
+      color: var(--text-main);
+    }
+    .unit-chip.active {
+      background: rgba(233, 178, 19, 0.2);
+      color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
 
     .grid-2 {
       display: grid;
@@ -438,8 +512,8 @@
   </header>
 
   <section class="hero">
-    <h2>Calculadora de Poder Adquisitivo</h2>
-    <p>Convierte divisas en tiempo real y guarda el registro de tus productos en la blockchain de Nimiq.</p>
+    <h2>Calculadora de Poder Adquisitivo e Inflación</h2>
+    <p>Convierte divisas en tiempo real y compara la inflación en moneda local vs Cripto en Nimiq.</p>
   </section>
 
   <!-- PASO 1 -->
@@ -470,13 +544,29 @@
   <section class="section-card">
     <div class="step-header">
       <span class="step-number">2</span>
-      <span>Registro de Producto o Servicio (Opcional)</span>
+      <span>Registro de Producto o Servicio Estandarizado</span>
+    </div>
+
+    <div class="form-field">
+      <label>Categoría del Gasto</label>
+      <div class="category-chips-bar" id="categoryChips">
+        <button class="cat-chip active" data-cat="A">🛒 Alimentos</button>
+        <button class="cat-chip" data-cat="T">🚗 Transporte</button>
+        <button class="cat-chip" data-cat="V">🏠 Vivienda</button>
+        <button class="cat-chip" data-cat="S">⚡ Servicios</button>
+        <button class="cat-chip" data-cat="O">💡 Otro</button>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label>Unidad / Medida Estandarizada</label>
+      <div class="unit-chips-bar" id="unitChips"></div>
     </div>
 
     <div class="grid-2">
       <div class="form-field">
-        <label for="productInput">Etiqueta de Producto (Máx. 12 carac.)</label>
-        <input type="text" id="productInput" placeholder="Ej: Cafe" maxlength="12">
+        <label for="productInput">Detalle / Producto (Máx. 8 carac.)</label>
+        <input type="text" id="productInput" placeholder="Ej: Arroz, Gas, Bus" maxlength="8">
       </div>
 
       <div class="form-field">
@@ -487,10 +577,9 @@
 
     <div class="form-field">
       <label for="localAmount">Precio Local (<span id="currencySymbol">COP</span>)</label>
-      <input type="number" id="localAmount" placeholder="Ej: 15000" min="0" step="any">
+      <input type="number" id="localAmount" placeholder="Ej: 5000" min="0" step="any">
     </div>
 
-    <!-- Panel de Métricas Estimadas -->
     <div class="result-panel">
       <div>
         <div class="metric-title" style="color: var(--accent-color);">NIMIQ ESTIMADO</div>
@@ -514,7 +603,7 @@
   <section class="section-card">
     <div class="step-header">
       <span class="step-number">3</span>
-      <span>Historial y Estadísticas On-Chain</span>
+      <span>Historial e Inflación Comparada On-Chain</span>
     </div>
 
     <div class="filter-section-wrapper">
@@ -528,17 +617,17 @@
     </div>
 
     <div class="time-filter-bar">
-      <span style="font-size: 0.8rem; color: var(--text-muted);" id="chartTitle">Histórico Registrado</span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);" id="chartTitle">Comparativa Inflación Local vs Cripto</span>
       <div class="time-chips-container">
-        <button class="time-chip-btn" onclick="setTimeRange('1D')">1D</button>
-        <button class="time-chip-btn" onclick="setTimeRange('1W')">1W</button>
-        <button class="time-chip-btn" onclick="setTimeRange('1M')">1M</button>
-        <button class="time-chip-btn" onclick="setTimeRange('1Y')">1Y</button>
-        <button class="time-chip-btn active" id="btnRangeAll" onclick="setTimeRange('ALL')">ALL</button>
+        <button class="time-chip-btn" onclick="setTimeRange('1D', event)">1D</button>
+        <button class="time-chip-btn" onclick="setTimeRange('1W', event)">1W</button>
+        <button class="time-chip-btn" onclick="setTimeRange('1M', event)">1M</button>
+        <button class="time-chip-btn" onclick="setTimeRange('1Y', event)">1Y</button>
+        <button class="time-chip-btn active" id="btnRangeAll" onclick="setTimeRange('ALL', event)">ALL</button>
       </div>
     </div>
 
-    <canvas id="pulseChart" height="130"></canvas>
+    <canvas id="pulseChart" height="140"></canvas>
 
     <div class="grouped-history" id="historyList">
       <div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 0.85rem;">
@@ -577,16 +666,34 @@
   const RECIPIENT_ADDRESS = 'NQ739VXGMXJR8F712K5VSRJDEEEJV1531U61';
   const hubApi = new HubApi('https://hub.nimiq.com');
   
-  // Constantes para persistencia de sesión por 12 horas
   const SESSION_KEY = 'nimiq_myindex_active_address';
   const SESSION_TIME_KEY = 'nimiq_myindex_session_timestamp';
   const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+  const categoryUnits = {
+    'A': [ { label: '1 Kilo', code: '1KG' }, { label: '500g', code: '500G' }, { label: '1 Litro', code: '1L' }, { label: '1 Unid', code: '1U' } ],
+    'T': [ { label: '1 Pasaje', code: '1P' }, { label: '1 Galón', code: '1G' }, { label: '1 Litro', code: '1L' }, { label: '1 Km', code: '1KM' } ],
+    'V': [ { label: '1 Mes', code: '1M' }, { label: '1 Día', code: '1D' } ],
+    'S': [ { label: '1 Mes', code: '1M' }, { label: 'kWh', code: 'KWH' }, { label: 'm³ Agua', code: 'M3' } ],
+    'O': [ { label: '1 Unid', code: '1U' }, { label: '1 Servicio', code: '1SRV' } ]
+  };
+
+  const categoryMap = {
+    'A': '🛒 Alimentos',
+    'T': '🚗 Transporte',
+    'V': '🏠 Vivienda',
+    'S': '⚡ Servicios',
+    'O': '💡 Otro'
+  };
 
   let userAddress = null;
   let selectedCategory = 'ALL';
   let selectedSubFilter = 'ALL';
   let selectedTimeRange = 'ALL';
   let isReverseMode = false;
+
+  let selectedCategoryCode = 'A';
+  let selectedUnitCode = '1KG';
 
   const countries = [
     { name: "Colombia", code: "COP" }, { name: "Estados Unidos", code: "USD" }, { name: "México", code: "MXN" },
@@ -608,6 +715,7 @@
   const conversionLabel = document.getElementById('conversionLabel');
   const conversionValue = document.getElementById('conversionValue');
 
+  const unitChipsContainer = document.getElementById('unitChips');
   const productInput = document.getElementById('productInput');
   const localAmountInput = document.getElementById('localAmount');
   const countrySelect = document.getElementById('countrySelect');
@@ -621,22 +729,68 @@
   const statusBox = document.getElementById('statusBox');
   const chipsContainer = document.getElementById('chipsContainer');
 
+  // Inicialización de Gráfica Dual (Moneda Local vs Cripto)
   const ctx = document.getElementById('pulseChart').getContext('2d');
   const pulseChart = new Chart(ctx, {
     type: 'line',
     data: { labels: [], datasets: [] },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { 
+        legend: { display: true, labels: { color: '#8c9ba5', font: { family: 'Muli' } } } 
+      },
       scales: {
         x: { grid: { display: false }, ticks: { color: '#8c9ba5', maxRotation: 45, minRotation: 0 } },
         y: { 
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: { display: true, text: 'NIM por USD', color: '#e9b213' },
           grid: { color: 'rgba(255,255,255,0.05)' }, 
-          ticks: { color: '#8c9ba5' },
-          grace: '15%'
+          ticks: { color: '#e9b213' }
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: { display: true, text: 'Precio Local', color: '#00bcd4' },
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#00bcd4' }
         }
       }
     }
+  });
+
+  function renderUnitChips(catCode) {
+    unitChipsContainer.innerHTML = '';
+    const units = categoryUnits[catCode] || categoryUnits['O'];
+    selectedUnitCode = units[0].code;
+
+    units.forEach((u, index) => {
+      const btn = document.createElement('button');
+      btn.className = `unit-chip ${index === 0 ? 'active' : ''}`;
+      btn.textContent = u.label;
+      btn.onclick = (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.unit-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        selectedUnitCode = u.code;
+        updateCalculations();
+      };
+      unitChipsContainer.appendChild(btn);
+    });
+  }
+
+  document.querySelectorAll('.cat-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      selectedCategoryCode = chip.getAttribute('data-cat');
+      renderUnitChips(selectedCategoryCode);
+      updateCalculations();
+    });
   });
 
   function saveSession(address) {
@@ -774,7 +928,11 @@
   function getCurrentCalculations() {
     const localVal = parseFloat(localAmountInput.value) || 0;
     const rawProduct = productInput.value.trim().toUpperCase().replace(/[^A-Z0-9 ]/g, '');
-    const item = rawProduct || null;
+    
+    const item = rawProduct 
+      ? `${selectedCategoryCode}:${selectedUnitCode}:${rawProduct}` 
+      : `${selectedCategoryCode}:${selectedUnitCode}`;
+    
     const curr = countrySelect.value;
 
     const rate = fiatRates[curr] || 1.0;
@@ -898,14 +1056,14 @@
     payload += `|S:${satsPerNim}`;
 
     if (calcP2.item && calcP2.localVal > 0) {
-      payload += `|P:${calcP2.item.substring(0, 12)}|${calcP2.localVal}${calcP2.curr}`;
+      payload += `|P:${calcP2.item}|${calcP2.localVal}${calcP2.curr}`;
     }
 
     const encodedPayload = new TextEncoder().encode(payload);
 
     if (encodedPayload.length > 64) {
       statusBox.classList.add('error');
-      statusBox.textContent = `El registro ocupa ${encodedPayload.length} bytes. Reduce la etiqueta del producto (máx. 64 bytes).`;
+      statusBox.textContent = `El registro ocupa ${encodedPayload.length} bytes. Reduce el detalle del producto (máx. 64 bytes).`;
       return;
     }
 
@@ -952,18 +1110,43 @@
       const parts = payloadStr.split('|');
       if (parts[0] !== 'MX') return null;
       
-      let item = null;
+      let itemRaw = null;
       let conv = null;
       let sats = null;
+      let fiatVal = 0;
+      let fiatCurr = 'USD';
 
       parts.forEach(p => {
-        if (p.startsWith('P:')) item = p.replace('P:', '');
+        if (p.startsWith('P:')) {
+          itemRaw = p.replace('P:', '');
+        } else if (p.match(/^[0-9.]+[A-Z]{3}$/)) {
+          const match = p.match(/^([0-9.]+)([A-Z]{3})$/);
+          if (match) {
+            fiatVal = parseFloat(match[1]);
+            fiatCurr = match[2];
+          }
+        }
         if (p.includes('->')) conv = p;
         if (p.startsWith('S:')) sats = parseInt(p.replace('S:', ''), 10);
       });
 
-      const type = item ? 'PRODUCT' : 'CURRENCY';
-      return { type, item, conv, sats: isNaN(sats) ? 0 : sats };
+      let formattedTitle = '📦 Registro';
+
+      if (itemRaw && itemRaw.includes(':')) {
+        const subParts = itemRaw.split(':');
+        const catCode = subParts[0];
+        const unitCode = subParts[1] || '';
+        const prodName = subParts[2] || '';
+
+        const catEmoji = catCode === 'A' ? '🛒' : catCode === 'T' ? '🚗' : catCode === 'V' ? '🏠' : catCode === 'S' ? '⚡' : '💡';
+        
+        formattedTitle = `${catEmoji} ${prodName ? prodName + ' ' : ''}(${unitCode})`;
+      } else if (itemRaw) {
+        formattedTitle = `📦 ${itemRaw}`;
+      }
+
+      const type = itemRaw ? 'PRODUCT' : 'CURRENCY';
+      return { type, item: formattedTitle, conv, sats: isNaN(sats) ? 0 : sats, fiatVal, fiatCurr };
     } catch (e) { return null; }
   }
 
@@ -983,10 +1166,10 @@
     renderHistoryAndChart();
   }
 
-  function setTimeRange(range) {
+  function setTimeRange(range, evt) {
     selectedTimeRange = range;
     document.querySelectorAll('.time-chip-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    if (evt && evt.target) evt.target.classList.add('active');
     renderHistoryAndChart();
   }
 
@@ -1079,7 +1262,7 @@
       const div = document.createElement('div');
       div.className = 'group-item';
       
-      const badgeTitle = parsed.type === 'PRODUCT' ? `📦 ${parsed.item}` : `💱 DIVISA`;
+      const badgeTitle = parsed.type === 'PRODUCT' ? parsed.item : `💱 DIVISA`;
       const formattedDate = formatDate(item.timestamp);
 
       div.innerHTML = `
@@ -1106,7 +1289,7 @@
       .reverse();
 
     if (parsedData.length === 0) {
-      chartTitle.innerText = "Sin datos suficientes para graficar";
+      chartTitle.innerText = "Sin datos suficientes para graficar comparativa";
       pulseChart.data.labels = [];
       pulseChart.data.datasets = [];
       pulseChart.update();
@@ -1115,43 +1298,40 @@
 
     const labels = parsedData.map(d => formatDateShort(d.timestamp));
 
-    const dataPoints = parsedData.map(d => {
+    // Dataset 1: Tasa Nim por USD / Sats
+    const nimCryptoPoints = parsedData.map(d => {
       const rawVal = d.sats || 0;
       return rawVal <= 0 ? 2564 : rawVal; 
     });
 
-    let themeColor = '#e9b213';
-    let bgColor = 'rgba(233, 178, 19, 0.15)';
+    // Dataset 2: Precios Locales Registrados
+    const localPricePoints = parsedData.map(d => d.fiatVal || 0);
 
-    if (selectedCategory === 'PRODUCTS') {
-      themeColor = '#2ebd85';
-      bgColor = 'rgba(46, 189, 133, 0.15)';
-      chartTitle.innerText = `Índice de Precios Local (NIM por USD)`;
-    } else if (selectedCategory === 'CURRENCIES') {
-      themeColor = '#f7931a';
-      bgColor = 'rgba(247, 147, 26, 0.15)';
-      chartTitle.innerText = `Paridad Registrada (NIM por USD)`;
-    } else {
-      chartTitle.innerText = `Evolución del Poder Adquisitivo (NIM por 1 USD)`;
-    }
+    chartTitle.innerText = `Inflación Comparada: Valor Cripto vs Precio Local`;
 
     pulseChart.data.labels = labels;
-    pulseChart.data.datasets = [{
-      label: 'NIM por 1 USD',
-      data: dataPoints,
-      borderColor: themeColor,
-      backgroundColor: bgColor,
-      borderWidth: 3,
-      pointBackgroundColor: themeColor,
-      pointRadius: 5,
-      pointHoverRadius: 7,
-      fill: true,
-      tension: 0.25
-    }];
-
-    pulseChart.options.scales.y.ticks.callback = function(value) {
-      return value.toLocaleString() + ' NIM';
-    };
+    pulseChart.data.datasets = [
+      {
+        label: 'Tasa NIM/USD (Sats/NIM)',
+        data: nimCryptoPoints,
+        borderColor: '#e9b213',
+        backgroundColor: 'rgba(233, 178, 19, 0.15)',
+        borderWidth: 2,
+        yAxisID: 'y',
+        fill: true,
+        tension: 0.25
+      },
+      {
+        label: 'Precio Local ($)',
+        data: localPricePoints,
+        borderColor: '#00bcd4',
+        backgroundColor: 'rgba(0, 188, 212, 0.15)',
+        borderWidth: 2,
+        yAxisID: 'y1',
+        fill: false,
+        tension: 0.25
+      }
+    ];
 
     pulseChart.update();
   }
@@ -1168,6 +1348,7 @@
       console.warn("Mercado operando con tarifas base de reserva.");
     }
     initCountries();
+    renderUnitChips('A');
     updateConverter();
     updateCalculations();
     checkAndRestoreSession();
