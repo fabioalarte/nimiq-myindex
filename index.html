@@ -314,6 +314,36 @@
       color: var(--accent-color);
     }
 
+    .time-filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+    }
+
+    .time-chips-container {
+      display: flex;
+      gap: 6px;
+    }
+
+    .time-chip-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .time-chip-btn.active, .time-chip-btn:hover {
+      background: rgba(233, 178, 19, 0.2);
+      color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
     .chips-container {
       display: flex;
       flex-wrap: wrap;
@@ -346,7 +376,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 260px;
+      max-height: 280px;
       overflow-y: auto;
     }
     .group-item {
@@ -361,6 +391,8 @@
     .group-item-info { display: flex; flex-direction: column; gap: 4px; }
     .group-item-title { font-weight: 700; color: var(--text-main); font-size: 0.9rem; }
     .group-item-sub { font-size: 0.75rem; color: var(--text-muted); font-family: 'Fira Mono', monospace; word-break: break-all; }
+    .group-item-action { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .group-item-date { font-size: 0.72rem; color: var(--text-muted); font-family: 'Fira Mono', monospace; }
 
     .status-box {
       display: none;
@@ -495,7 +527,17 @@
       <div class="chips-container" id="chipsContainer"></div>
     </div>
 
-    <span style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;" id="chartTitle">Histórico Registrado</span>
+    <div class="time-filter-bar">
+      <span style="font-size: 0.8rem; color: var(--text-muted);" id="chartTitle">Histórico Registrado</span>
+      <div class="time-chips-container">
+        <button class="time-chip-btn" onclick="setTimeRange('1D')">1D</button>
+        <button class="time-chip-btn" onclick="setTimeRange('1W')">1W</button>
+        <button class="time-chip-btn" onclick="setTimeRange('1M')">1M</button>
+        <button class="time-chip-btn" onclick="setTimeRange('1Y')">1Y</button>
+        <button class="time-chip-btn active" id="btnRangeAll" onclick="setTimeRange('ALL')">ALL</button>
+      </div>
+    </div>
+
     <canvas id="pulseChart" height="130"></canvas>
 
     <div class="grouped-history" id="historyList">
@@ -538,6 +580,7 @@
   let userAddress = null;
   let selectedCategory = 'ALL';
   let selectedSubFilter = 'ALL';
+  let selectedTimeRange = 'ALL';
   let isReverseMode = false;
 
   const countries = [
@@ -581,11 +624,11 @@
       responsive: true,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#8c9ba5' } },
+        x: { grid: { display: false }, ticks: { color: '#8c9ba5', maxRotation: 45, minRotation: 0 } },
         y: { 
           grid: { color: 'rgba(255,255,255,0.05)' }, 
           ticks: { color: '#8c9ba5' },
-          grace: '15%' // Permite rango dinámico visible aunque las variaciones sean pequeñas
+          grace: '15%'
         }
       }
     }
@@ -630,6 +673,25 @@
     if (nimUsd <= 0) return 2564;
     const nimPerUsd = Math.round(1 / nimUsd);
     return isNaN(nimPerUsd) || nimPerUsd <= 0 ? 2564 : nimPerUsd;
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '';
+    const date = new Date(ts);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const mins = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year}, ${hours}:${mins}`;
+  }
+
+  function formatDateShort(ts) {
+    if (!ts) return '';
+    const date = new Date(ts);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
   }
 
   function updateConverter() {
@@ -699,8 +761,6 @@
   localAmountInput.addEventListener('input', updateCalculations);
   countrySelect.addEventListener('change', updateCalculations);
 
-  // --- LÓGICA DE HISTORIAL Y CONSULTA ON-CHAIN ---
-
   btnConnect.addEventListener('click', async () => {
     try {
       const option = await hubApi.chooseAddress({ appName: 'NIMIQ MyIndex' });
@@ -757,7 +817,6 @@
           if (tx.recipient === RECIPIENT_ADDRESS) {
             const payloadText = hexToUtf8(tx.data || tx.extraData);
             if (payloadText && payloadText.startsWith('MX|')) {
-              // Si no existe, agregamos
               if (!onChainRecords.some(r => r.hash === tx.hash)) {
                 onChainRecords.unshift({
                   address: tx.sender,
@@ -821,7 +880,7 @@
       const result = await hubApi.checkout({
         appName: 'NIMIQ MyIndex',
         recipient: RECIPIENT_ADDRESS,
-        value: 10000, // 0.1 NIM expresado en Lunas
+        value: 10000,
         extraData: encodedPayload,
         sender: userAddress
       });
@@ -829,7 +888,6 @@
       if (result && result.hash) {
         statusBox.textContent = `¡Guardado en la blockchain! TX: ${result.hash.substring(0, 10)}...`;
 
-        // INSERCIÓN OPTIMISTA: Agregamos el registro inmediatamente al estado local sin esperar al indexador
         const newRecord = {
           address: userAddress,
           hash: result.hash,
@@ -889,6 +947,13 @@
     renderHistoryAndChart();
   }
 
+  function setTimeRange(range) {
+    selectedTimeRange = range;
+    document.querySelectorAll('.time-chip-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    renderHistoryAndChart();
+  }
+
   function renderFilterSubmenu() {
     chipsContainer.innerHTML = '';
     if (!userAddress) return;
@@ -937,6 +1002,7 @@
   function renderHistoryAndChart() {
     if (!userAddress) return;
     const records = JSON.parse(localStorage.getItem(`nimiq_myindex_${userAddress}`) || '[]');
+    const now = Date.now();
     
     const filteredRecords = records.filter(r => {
       const parsed = parsePayload(r.payload);
@@ -950,6 +1016,14 @@
         if (selectedSubFilter !== 'ALL' && !parsed.conv.includes(selectedSubFilter)) return false;
       }
 
+      if (selectedTimeRange !== 'ALL') {
+        const diffHours = (now - r.timestamp) / (1000 * 60 * 60);
+        if (selectedTimeRange === '1D' && diffHours > 24) return false;
+        if (selectedTimeRange === '1W' && diffHours > 168) return false;
+        if (selectedTimeRange === '1M' && diffHours > 720) return false;
+        if (selectedTimeRange === '1Y' && diffHours > 8760) return false;
+      }
+
       return true;
     });
 
@@ -959,7 +1033,7 @@
 
   function renderHistoryItems(items) {
     if (items.length === 0) {
-      historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 0.85rem;">No hay registros en esta categoría.</div>`;
+      historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 0.85rem;">No hay registros en esta categoría o período.</div>`;
       return;
     }
 
@@ -970,13 +1044,15 @@
       div.className = 'group-item';
       
       const badgeTitle = parsed.type === 'PRODUCT' ? `📦 ${parsed.item}` : `💱 DIVISA`;
+      const formattedDate = formatDate(item.timestamp);
 
       div.innerHTML = `
         <div class="group-item-info">
           <span class="group-item-title">${badgeTitle}</span>
           <span class="group-item-sub">${item.payload}</span>
         </div>
-        <div>
+        <div class="group-item-action">
+          <span class="group-item-date">${formattedDate}</span>
           <a href="https://nimiq.watch/#${item.hash}" target="_blank" rel="noopener" style="color:var(--accent-color); font-size: 0.75rem; text-decoration: none; font-weight: bold;">Explorar TX</a>
         </div>
       `;
@@ -988,7 +1064,7 @@
     const parsedData = records
       .map(r => {
         const parsed = parsePayload(r.payload);
-        return parsed ? { ...parsed, hash: r.hash } : null;
+        return parsed ? { ...parsed, timestamp: r.timestamp } : null;
       })
       .filter(p => p !== null)
       .reverse();
@@ -1001,9 +1077,8 @@
       return;
     }
 
-    const labels = parsedData.map((d, idx) => `#${idx + 1}`);
+    const labels = parsedData.map(d => formatDateShort(d.timestamp));
 
-    // Mapeamos los valores en NIM por USD grabado en el payload (S:satsPerNim)
     const dataPoints = parsedData.map(d => {
       const rawVal = d.sats || 0;
       return rawVal <= 0 ? 2564 : rawVal; 
