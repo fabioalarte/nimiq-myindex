@@ -1,8 +1,26 @@
+<!--
+================================================================================
+  NIMIQ MYINDEX | PROTOCOLO DE REGISTRO DE PRECIOS Y PODER ADQUISITIVO
+================================================================================
+  Autor Original / Creador: Fabio Alarte (@fabioalarte)
+  Organización / Proyecto: Nimiq Mini Apps Competition / MODAL Layer
+  Licencia: MIT License (Código Libre con Atribución Requerida)
+  Repositorio & Firma: Nimiq On-Chain Protocol ID "MX"
+  Contacto / Redes: 
+    - Twitter/X: https://x.com/fabioalarte
+    - Facebook: https://facebook.com/fabioalarte
+    - Instagram: https://instagram.com/fabioalarte
+  
+  (c) 2026 Fabio Alarte. Todos los derechos reservados sobre la implementación base.
+================================================================================
+-->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Fabio Alarte (@fabioalarte)">
+  <meta name="application-name" content="NIMIQ MyIndex">
   <title>NIMIQ MyIndex | Registro de Precios</title>
 
   <!-- Tipografías Oficiales Nimiq -->
@@ -140,35 +158,49 @@
       font-size: 0.75rem;
     }
 
-    .conversion-inline-group {
+    .converter-row {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
 
     .amount-input {
       background: var(--bg-color);
       color: var(--text-main);
       border: 1px solid var(--card-border);
-      padding: 12px 14px;
+      padding: 12px;
       border-radius: 10px;
       font-size: 1.1rem;
       font-weight: bold;
       outline: none;
-      width: 45%;
+      width: 30%;
       font-family: 'Fira Mono', monospace;
+    }
+
+    .source-unit-badge {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 0.95rem;
+      color: var(--accent-color);
+      min-width: 75px;
+      text-align: center;
     }
 
     .btn-swap {
       background: var(--accent-color);
       color: #000;
       border: none;
-      padding: 10px 16px;
+      padding: 10px 14px;
       border-radius: 10px;
       font-weight: bold;
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
+      transition: transform 0.2s;
     }
+    .btn-swap:hover { transform: scale(1.05); }
 
     select, input[type="text"], input[type="number"] {
       background: var(--bg-color);
@@ -183,12 +215,6 @@
     select.global-select { flex: 1; }
     input:focus, select:focus { border-color: var(--accent-color); }
 
-    input[type=range] {
-      accent-color: var(--accent-color);
-      width: 100%;
-      cursor: pointer;
-    }
-
     .conversion-result {
       text-align: center;
       padding: 16px;
@@ -198,7 +224,7 @@
     }
 
     .conversion-val {
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       font-weight: 800;
       color: var(--accent-color);
       margin-top: 4px;
@@ -218,7 +244,11 @@
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
-    @media (max-width: 580px) { .grid-2 { grid-template-columns: 1fr; } }
+    @media (max-width: 580px) { 
+      .grid-2 { grid-template-columns: 1fr; }
+      .converter-row { flex-wrap: wrap; }
+      .amount-input { width: 60%; }
+    }
 
     .result-panel {
       background: rgba(15, 17, 26, 0.7);
@@ -248,6 +278,7 @@
     }
     .btn-anchor:hover { opacity: 0.95; }
     .btn-anchor:active { transform: scale(0.99); }
+    .btn-anchor:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .filter-section-wrapper {
       display: flex;
@@ -386,9 +417,10 @@
       <span>Conversor de Criptomonedas</span>
     </div>
 
-    <div class="conversion-inline-group">
-      <input type="number" id="amountInput" class="amount-input" value="1" min="0" step="any">
-      <button class="btn-swap" id="btnSwap" title="Invertir conversión">⇄</button>
+    <div class="converter-row">
+      <input type="number" id="amountInput" class="amount-input" value="100" min="0" step="any">
+      <div class="source-unit-badge" id="sourceUnitLabel">NIM</div>
+      <button class="btn-swap" id="btnSwap" title="Intercambiar equivalencia">⇄</button>
       <select class="global-select" id="targetAssetSelect">
         <option value="USDT" selected>₮ USDT (Tether)</option>
         <option value="BTC">₿ BTC (Bitcoin)</option>
@@ -396,11 +428,9 @@
       </select>
     </div>
 
-    <input type="range" id="amountRange" min="1" max="1000000" value="1">
-
     <div class="conversion-result">
       <span style="font-size: 0.85rem; color: var(--text-muted);" id="conversionLabel">Resultado de Conversión</span>
-      <div class="conversion-val" id="conversionValue">Cargando CoinGecko...</div>
+      <div class="conversion-val" id="conversionValue">Cargando datos...</div>
     </div>
   </section>
 
@@ -408,13 +438,13 @@
   <section class="section-card">
     <div class="step-header">
       <span class="step-number">2</span>
-      <span>Registro de Producto o Servicio</span>
+      <span>Registro de Producto o Servicio (Opcional)</span>
     </div>
 
     <div class="grid-2">
       <div class="form-field">
         <label for="productInput">Etiqueta de Producto (Máx. 12 carac.)</label>
-        <input type="text" id="productInput" placeholder="Ej: Transportex1" maxlength="12">
+        <input type="text" id="productInput" placeholder="Ej: Cafe" maxlength="12">
       </div>
 
       <div class="form-field">
@@ -425,7 +455,7 @@
 
     <div class="form-field">
       <label for="localAmount">Precio Local (<span id="currencySymbol">COP</span>)</label>
-      <input type="number" id="localAmount" placeholder="Ej: 350000" min="0" step="any">
+      <input type="number" id="localAmount" placeholder="Ej: 15000" min="0" step="any">
     </div>
 
     <!-- Panel de Métricas Estimadas -->
@@ -452,7 +482,7 @@
   <section class="section-card">
     <div class="step-header">
       <span class="step-number">3</span>
-      <span>Historial y Estadísticas</span>
+      <span>Historial y Estadísticas On-Chain</span>
     </div>
 
     <div class="filter-section-wrapper">
@@ -470,7 +500,7 @@
 
     <div class="grouped-history" id="historyList">
       <div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 0.85rem;">
-        Conecta tu wallet para sincronizar tus transacciones registradas.
+        Conecta tu wallet para sincronizar tus transacciones grabadas en la blockchain.
       </div>
     </div>
   </section>
@@ -487,6 +517,21 @@
 </div>
 
 <script>
+  /*
+   * =========================================================================
+   * NIMIQ MYINDEX CORE LOGIC
+   * Original Developer: Fabio Alarte (@fabioalarte)
+   * Repository Rights & Blockchain Payload Architecture: Protocol "MX|"
+   * =========================================================================
+   */
+
+  console.log(
+    "%c NIMIQ MyIndex %c Created by @fabioalarte %c",
+    "background: #e9b213; color: #000; font-weight: bold; padding: 4px 8px; border-radius: 4px 0 0 4px;",
+    "background: #1a1d2d; color: #fff; padding: 4px 8px; border-radius: 0 4px 4px 0;",
+    "background: transparent;"
+  );
+
   const RECIPIENT_ADDRESS = 'NQ739VXGMXJR8F712K5VSRJDEEEJV1531U61';
   const hubApi = new HubApi('https://hub.nimiq.com');
   
@@ -503,11 +548,13 @@
   ];
 
   let basePrices = { NIM: 0.00039, BTC: 62000, USDT: 1.00, USDC: 1.00 };
+  let fiatRates = { COP: 4150, MXN: 19.5, ARS: 950, EUR: 0.92, GBP: 0.78, BRL: 5.5, CLP: 930, PEN: 3.75, VES: 36.5, GTQ: 7.7, USD: 1.0 };
 
   const btnConnect = document.getElementById('btnConnect');
   const btnDisconnect = document.getElementById('btnDisconnect');
+  const btnSnapshot = document.getElementById('btnSnapshot');
   const amountInput = document.getElementById('amountInput');
-  const amountRange = document.getElementById('amountRange');
+  const sourceUnitLabel = document.getElementById('sourceUnitLabel');
   const targetSelect = document.getElementById('targetAssetSelect');
   const btnSwap = document.getElementById('btnSwap');
   const conversionLabel = document.getElementById('conversionLabel');
@@ -535,7 +582,11 @@
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false }, ticks: { color: '#8c9ba5' } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8c9ba5' } }
+        y: { 
+          grid: { color: 'rgba(255,255,255,0.05)' }, 
+          ticks: { color: '#8c9ba5' },
+          grace: '15%' // Permite rango dinámico visible aunque las variaciones sean pequeñas
+        }
       }
     }
   });
@@ -553,7 +604,32 @@
 
   function getAssetInUsd(asset) {
     if (asset === 'BTC') return basePrices.BTC;
+    if (asset === 'USDT') return basePrices.USDT;
+    if (asset === 'USDC') return basePrices.USDC;
     return 1.00;
+  }
+
+  function formatCompactAmount(amount, asset) {
+    const qty = parseFloat(amount) || 0;
+    if (asset === 'BTC') {
+      const sats = Math.round(qty * 100000000);
+      return `${sats}SAT`;
+    }
+    if (asset === 'NIM') {
+      if (qty < 1 && qty >= 0.001) {
+        const mNim = Math.round(qty * 1000);
+        return `${mNim}mNIM`;
+      }
+    }
+    const formatted = qty < 1 ? qty.toFixed(4).replace(/\.?0+$/, '') : Math.round(qty);
+    return `${formatted}${asset}`;
+  }
+
+  function getSafeSatsPerNim() {
+    const nimUsd = parseFloat(basePrices.NIM) || 0.00039;
+    if (nimUsd <= 0) return 2564;
+    const nimPerUsd = Math.round(1 / nimUsd);
+    return isNaN(nimPerUsd) || nimPerUsd <= 0 ? 2564 : nimPerUsd;
   }
 
   function updateConverter() {
@@ -570,17 +646,25 @@
       sourceUnit = 'NIM';
       targetQty = qty * unitRate;
       targetUnit = asset;
+      sourceUnitLabel.innerText = 'NIM';
     } else {
       sourceQty = qty;
       sourceUnit = asset;
       targetQty = qty / unitRate;
       targetUnit = 'NIM';
+      sourceUnitLabel.innerText = asset;
     }
 
     conversionLabel.innerText = `${sourceQty.toLocaleString()} ${sourceUnit} equivale a:`;
-    conversionValue.innerText = `${targetQty.toLocaleString(undefined, {maximumFractionDigits: 6})} ${targetUnit}`;
+    
+    if (targetUnit === 'BTC') {
+      const sats = Math.round(targetQty * 100000000);
+      conversionValue.innerText = `${targetQty.toFixed(8)} BTC (${sats.toLocaleString()} Sats)`;
+    } else {
+      conversionValue.innerText = `${targetQty.toLocaleString(undefined, {maximumFractionDigits: 6})} ${targetUnit}`;
+    }
 
-    return { sourceQty, sourceUnit, targetQty, targetUnit, unitRate };
+    return { sourceQty, sourceUnit, targetQty, targetUnit };
   }
 
   function getCurrentCalculations() {
@@ -589,11 +673,8 @@
     const item = rawProduct || null;
     const curr = countrySelect.value;
 
-    let usdEst = localVal;
-    if (curr === 'COP') usdEst = localVal / 4150;
-    else if (curr === 'MXN') usdEst = localVal / 19.5;
-    else if (curr === 'ARS') usdEst = localVal / 950;
-    else if (curr === 'EUR') usdEst = localVal * 1.08;
+    const rate = fiatRates[curr] || 1.0;
+    const usdEst = localVal > 0 ? localVal / rate : 0;
 
     const nimQty = usdEst > 0 ? usdEst / basePrices.NIM : 0;
     const btcQty = usdEst > 0 ? usdEst / basePrices.BTC : 0;
@@ -610,14 +691,15 @@
     valUSD.innerText = `$${calc.usdEst.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   }
 
-  amountInput.addEventListener('input', (e) => { amountRange.value = e.target.value; updateConverter(); });
-  amountRange.addEventListener('input', (e) => { amountInput.value = e.target.value; updateConverter(); });
+  amountInput.addEventListener('input', updateConverter);
   btnSwap.addEventListener('click', () => { isReverseMode = !isReverseMode; updateConverter(); });
   targetSelect.addEventListener('change', updateConverter);
 
   productInput.addEventListener('input', updateCalculations);
   localAmountInput.addEventListener('input', updateCalculations);
   countrySelect.addEventListener('change', updateCalculations);
+
+  // --- LÓGICA DE HISTORIAL Y CONSULTA ON-CHAIN ---
 
   btnConnect.addEventListener('click', async () => {
     try {
@@ -626,7 +708,8 @@
       btnConnect.innerText = `${userAddress.substring(0, 4)}...${userAddress.substring(userAddress.length - 4)}`;
       btnDisconnect.style.display = 'inline-block';
       renderIdenticon(userAddress);
-      loadSavedHistory();
+      
+      fetchOnChainHistory();
     } catch (e) { console.error(e); }
   });
 
@@ -636,6 +719,9 @@
     btnDisconnect.style.display = 'none';
     document.getElementById('userIdenticon').style.display = 'none';
     renderHistoryItems([]);
+    pulseChart.data.labels = [];
+    pulseChart.data.datasets = [];
+    pulseChart.update();
   });
 
   function renderIdenticon(addr) {
@@ -646,8 +732,55 @@
     }
   }
 
-  // PAYLOAD DEPURADO Y OPTIMIZADO CON PARIDAD TETHER + BTC (SATS)
-  document.getElementById('btnSnapshot').addEventListener('click', async () => {
+  function hexToUtf8(hex) {
+    if (!hex) return '';
+    let cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+    try {
+      let bytes = new Uint8Array(cleanHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+      return new TextDecoder().decode(bytes);
+    } catch (e) { return ''; }
+  }
+
+  async function fetchOnChainHistory() {
+    if (!userAddress) return;
+
+    historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 0.85rem;">Sincronizando con la Blockchain de Nimiq...</div>`;
+
+    let onChainRecords = JSON.parse(localStorage.getItem(`nimiq_myindex_${userAddress}`) || '[]');
+
+    try {
+      const response = await fetch(`https://api.nimiq.watch/account/${userAddress}/transactions?limit=50`);
+      if (response.ok) {
+        const transactions = await response.json();
+        
+        transactions.forEach(tx => {
+          if (tx.recipient === RECIPIENT_ADDRESS) {
+            const payloadText = hexToUtf8(tx.data || tx.extraData);
+            if (payloadText && payloadText.startsWith('MX|')) {
+              // Si no existe, agregamos
+              if (!onChainRecords.some(r => r.hash === tx.hash)) {
+                onChainRecords.unshift({
+                  address: tx.sender,
+                  hash: tx.hash,
+                  payload: payloadText,
+                  timestamp: tx.timestamp ? tx.timestamp * 1000 : Date.now()
+                });
+              }
+            }
+          }
+        });
+
+        localStorage.setItem(`nimiq_myindex_${userAddress}`, JSON.stringify(onChainRecords));
+      }
+    } catch (e) {
+      console.warn("Respaldo local utilizado por latencia en API pública.");
+    }
+
+    renderFilterSubmenu();
+    renderHistoryAndChart();
+  }
+
+  btnSnapshot.addEventListener('click', async () => {
     statusBox.style.display = 'block';
     statusBox.classList.remove('error');
 
@@ -657,82 +790,71 @@
       return;
     }
 
-    const p1Qty = parseFloat(amountInput.value);
-    const hasValidPart1 = !isNaN(p1Qty) && p1Qty > 0;
-
-    const p2Product = productInput.value.trim();
-    const p2Amount = parseFloat(localAmountInput.value);
-    const hasValidPart2 = p2Product.length > 0 && !isNaN(p2Amount) && p2Amount > 0;
-
-    if (!hasValidPart1 && !hasValidPart2) {
-      statusBox.classList.add('error');
-      statusBox.textContent = 'Ingresa datos válidos en al menos una sección.';
-      return;
-    }
-
     const convCalc = updateConverter();
     const calcP2 = getCurrentCalculations();
-    
-    // Cálculo de Satoshis por 1 NIM para la paridad BTC
-    const nimInBtc = basePrices.NIM / basePrices.BTC;
-    const nimInSats = Math.round(nimInBtc * 100000000);
-    
-    // Payload Depurado: MX | Paridad Tether | Paridad Satoshis | Producto | Moneda Local
+    const satsPerNim = getSafeSatsPerNim();
+
     let payload = `MX`;
 
-    if (hasValidPart1) {
-      payload += `|${convCalc.sourceQty}${convCalc.sourceUnit}->${convCalc.targetQty < 1 ? convCalc.targetQty.toFixed(4) : Math.round(convCalc.targetQty)}${convCalc.targetUnit}`;
-    }
+    const srcStr = formatCompactAmount(convCalc.sourceQty, convCalc.sourceUnit);
+    const tgtStr = formatCompactAmount(convCalc.targetQty, convCalc.targetUnit);
+    payload += `|${srcStr}->${tgtStr}`;
 
-    payload += `|S:${nimInSats}`;
+    payload += `|S:${satsPerNim}`;
 
-    if (hasValidPart2) {
-      payload += `|T:${calcP2.item.substring(0, 12)}|${calcP2.localVal}${calcP2.curr}`;
+    if (calcP2.item && calcP2.localVal > 0) {
+      payload += `|P:${calcP2.item.substring(0, 12)}|${calcP2.localVal}${calcP2.curr}`;
     }
 
     const encodedPayload = new TextEncoder().encode(payload);
+
     if (encodedPayload.length > 64) {
       statusBox.classList.add('error');
-      statusBox.textContent = `El registro supera los 64 bytes permitidos (${encodedPayload.length}/64 bytes). Reduce la etiqueta del producto.`;
+      statusBox.textContent = `El registro ocupa ${encodedPayload.length} bytes. Reduce la etiqueta del producto (máx. 64 bytes).`;
       return;
     }
 
     try {
-      statusBox.textContent = 'Procesando en la red Nimiq...';
+      btnSnapshot.disabled = true;
+      statusBox.textContent = 'Procesando en la red Nimiq... Completa la acción en el Hub.';
 
       const result = await hubApi.checkout({
         appName: 'NIMIQ MyIndex',
         recipient: RECIPIENT_ADDRESS,
-        value: 10000,
+        value: 10000, // 0.1 NIM expresado en Lunas
         extraData: encodedPayload,
         sender: userAddress
       });
 
       if (result && result.hash) {
         statusBox.textContent = `¡Guardado en la blockchain! TX: ${result.hash.substring(0, 10)}...`;
-        saveHistoryItem({ address: userAddress, hash: result.hash, payload, timestamp: Date.now() });
-        loadSavedHistory();
+
+        // INSERCIÓN OPTIMISTA: Agregamos el registro inmediatamente al estado local sin esperar al indexador
+        const newRecord = {
+          address: userAddress,
+          hash: result.hash,
+          payload: payload,
+          timestamp: Date.now()
+        };
+
+        const localRecords = JSON.parse(localStorage.getItem(`nimiq_myindex_${userAddress}`) || '[]');
+        localRecords.unshift(newRecord);
+        localStorage.setItem(`nimiq_myindex_${userAddress}`, JSON.stringify(localRecords));
+
+        renderFilterSubmenu();
+        renderHistoryAndChart();
       }
     } catch (e) {
       statusBox.classList.add('error');
-      statusBox.textContent = 'Transacción no completada.';
+      statusBox.textContent = 'Transacción cancelada o fallida.';
+    } finally {
+      btnSnapshot.disabled = false;
     }
   });
 
-  function saveHistoryItem(record) {
-    const records = JSON.parse(localStorage.getItem(`nimiq_myindex_${userAddress}`) || '[]');
-    records.unshift(record);
-    localStorage.setItem(`nimiq_myindex_${userAddress}`, JSON.stringify(records));
-  }
-
-  function loadSavedHistory() {
-    if (!userAddress) return;
-    renderFilterSubmenu();
-    renderHistoryAndChart();
-  }
-
   function parsePayload(payloadStr) {
     try {
+      if (typeof payloadStr !== 'string') return null;
       const parts = payloadStr.split('|');
       if (parts[0] !== 'MX') return null;
       
@@ -741,13 +863,13 @@
       let sats = null;
 
       parts.forEach(p => {
-        if (p.startsWith('T:')) item = p.replace('T:', '');
+        if (p.startsWith('P:')) item = p.replace('P:', '');
         if (p.includes('->')) conv = p;
-        if (p.startsWith('S:')) sats = parseInt(p.replace('S:', ''));
+        if (p.startsWith('S:')) sats = parseInt(p.replace('S:', ''), 10);
       });
 
       const type = item ? 'PRODUCT' : 'CURRENCY';
-      return { type, item, conv, sats };
+      return { type, item, conv, sats: isNaN(sats) ? 0 : sats };
     } catch (e) { return null; }
   }
 
@@ -872,7 +994,7 @@
       .reverse();
 
     if (parsedData.length === 0) {
-      chartTitle.innerText = "Sin datos para la selección actual";
+      chartTitle.innerText = "Sin datos suficientes para graficar";
       pulseChart.data.labels = [];
       pulseChart.data.datasets = [];
       pulseChart.update();
@@ -880,43 +1002,57 @@
     }
 
     const labels = parsedData.map((d, idx) => `#${idx + 1}`);
-    const dataPoints = parsedData.map(d => d.sats || 0);
+
+    // Mapeamos los valores en NIM por USD grabado en el payload (S:satsPerNim)
+    const dataPoints = parsedData.map(d => {
+      const rawVal = d.sats || 0;
+      return rawVal <= 0 ? 2564 : rawVal; 
+    });
 
     let themeColor = '#e9b213';
-    let bgColor = 'rgba(233, 178, 19, 0.1)';
+    let bgColor = 'rgba(233, 178, 19, 0.15)';
 
     if (selectedCategory === 'PRODUCTS') {
       themeColor = '#2ebd85';
-      bgColor = 'rgba(46, 189, 133, 0.1)';
-      chartTitle.innerText = `Tendencia Registrada (Satoshis por NIM)`;
+      bgColor = 'rgba(46, 189, 133, 0.15)';
+      chartTitle.innerText = `Índice de Precios Local (NIM por USD)`;
     } else if (selectedCategory === 'CURRENCIES') {
       themeColor = '#f7931a';
-      bgColor = 'rgba(247, 147, 26, 0.1)';
-      chartTitle.innerText = `Paridad Registrada con Bitcoin (SATS)`;
+      bgColor = 'rgba(247, 147, 26, 0.15)';
+      chartTitle.innerText = `Paridad Registrada (NIM por USD)`;
     } else {
-      chartTitle.innerText = `Paridad On-Chain (1 NIM en Satoshis)`;
+      chartTitle.innerText = `Evolución del Poder Adquisitivo (NIM por 1 USD)`;
     }
 
     pulseChart.data.labels = labels;
     pulseChart.data.datasets = [{
-      label: 'Satoshis por NIM',
+      label: 'NIM por 1 USD',
       data: dataPoints,
       borderColor: themeColor,
       backgroundColor: bgColor,
-      borderWidth: 2,
+      borderWidth: 3,
+      pointBackgroundColor: themeColor,
+      pointRadius: 5,
+      pointHoverRadius: 7,
       fill: true,
-      tension: 0.2
+      tension: 0.25
     }];
+
+    pulseChart.options.scales.y.ticks.callback = function(value) {
+      return value.toLocaleString() + ' NIM';
+    };
+
     pulseChart.update();
   }
 
   async function initMarket() {
     try {
-      const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=nimiq-2,bitcoin,tether&vs_currencies=usd');
+      const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=nimiq-2,bitcoin,tether,usd-coin&vs_currencies=usd');
       const data = await res.json();
-      if (data['nimiq-2'] && data['nimiq-2'].usd) basePrices.NIM = data['nimiq-2'].usd;
-      if (data['bitcoin'] && data['bitcoin'].usd) basePrices.BTC = data['bitcoin'].usd;
-      if (data['tether'] && data['tether'].usd) basePrices.USDT = data['tether'].usd;
+      if (data['nimiq-2']?.usd) basePrices.NIM = data['nimiq-2'].usd;
+      if (data['bitcoin']?.usd) basePrices.BTC = data['bitcoin'].usd;
+      if (data['tether']?.usd) basePrices.USDT = data['tether'].usd;
+      if (data['usd-coin']?.usd) basePrices.USDC = data['usd-coin'].usd;
     } catch (e) {
       console.warn("Mercado operando con tarifas base de reserva.");
     }
@@ -929,3 +1065,9 @@
 </script>
 </body>
 </html>
+<!--
+================================================================================
+  END OF FILE | NIMIQ MYINDEX PROTOCOL
+  Designed & Engineered by Fabio Alarte (https://x.com/fabioalarte)
+================================================================================
+-->
