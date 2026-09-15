@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NIMIQ MyIndex | Registro de Precios</title>
+
+  <!-- Tipografías Oficiales Nimiq -->
+  <link href="https://fonts.googleapis.com/css?family=Muli:400,600,700|Fira+Mono:400,600&display=swap" rel="stylesheet">
+
+  <!-- SDKs Oficiales Nimiq & Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@nimiq/hub-api@v1.2.0/dist/standalone/HubApi.standalone.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@nimiq/identicons@v1.6.0/dist/identicons.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0f111a;
+      --card-bg: #1a1d2d;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-color: #e9b213;
+      --btc-color: #f7931a;
+      --usdt-color: #26a17b;
+      --danger-color: #e53935;
+      --text-main: #ffffff;
+      --text-muted: #8c9ba5;
+      --nq-green: #2ebd85;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Muli', system-ui, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 30px 16px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 740px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+
+    .brand-logo {
+      background: var(--accent-color);
+      color: #000;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+
+    .wallet-controls { display: flex; gap: 10px; align-items: center; }
+
+    .btn-wallet {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-wallet:hover { background: rgba(255, 255, 255, 0.1); }
+
+    .btn-disconnect {
+      background: rgba(229, 57, 53, 0.15);
+      border-color: var(--danger-color);
+      color: #ff6b6b;
+      display: none;
+    }
+
+    .identicon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #fff;
+      display: none;
+      overflow: hidden;
+    }
+
+    .hero {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+    }
+    .hero h2 { font-size: 1.3rem; color: var(--accent-color); margin-bottom: 6px; }
+    .hero p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
+
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .step-number {
+      background: rgba(233, 178, 19, 0.15);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    .conversion-inline-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .amount-input {
+      background: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      outline: none;
+      width: 45%;
+      font-family: 'Fira Mono', monospace;
+    }
+
+    .btn-swap {
+      background: var(--accent-color);
+      color: #000;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      background: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+      font-family: inherit;
+    }
+    select.global-select { flex: 1; }
+    input:focus, select:focus { border-color: var(--accent-color); }
+
+    input[type=range] {
+      accent-color: var(--accent-color);
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .conversion-result {
+      text-align: center;
+      padding: 16px;
+      background: rgba(15, 17, 26, 0.7);
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .conversion-val {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent-color);
+      margin-top: 4px;
+      font-family: 'Fira Mono', monospace;
+      word-break: break-all;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form-field label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 580px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .result-panel {
+      background: rgba(15, 17, 26, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      text-align: center;
+    }
+    @media (max-width: 480px) { .result-panel { grid-template-columns: 1fr; gap: 14px; } }
+
+    .metric-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .metric-value { font-size: 1.05rem; font-weight: 800; font-family: 'Fira Mono', monospace; word-break: break-all; }
+
+    .btn-anchor {
+      background: var(--accent-color);
+      color: #000;
+      font-weight: 800;
+      border: none;
+      padding: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn-anchor:hover { opacity: 0.95; }
+    .btn-anchor:active { transform: scale(0.99); }
+
+    .filter-section-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(15, 17, 26, 0.5);
+      border: 1px solid var(--card-border);
+      padding: 12px;
+      border-radius: 12px;
+    }
+
+    .main-filter-tabs {
+      display: flex;
+      gap: 6px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 8px;
+    }
+
+    .tab-category-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-category-btn.active {
+      background: rgba(233, 178, 19, 0.15);
+      color: var(--accent-color);
+    }
+
+    .chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    .chip-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip-btn.active, .chip-btn:hover {
+      background: var(--accent-color);
+      color: #000;
+      border-color: var(--accent-color);
+      font-weight: 700;
+    }
+
+    .grouped-history {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .group-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      padding: 12px 14px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .group-item-info { display: flex; flex-direction: column; gap: 4px; }
+    .group-item-title { font-weight: 700; color: var(--text-main); font-size: 0.9rem; }
+    .group-item-sub { font-size: 0.75rem; color: var(--text-muted); font-family: 'Fira Mono', monospace; word-break: break-all; }
+
+    .status-box {
+      display: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      background: rgba(46, 189, 133, 0.1);
+      border: 1px solid var(--nq-green);
+      color: #fff;
+    }
+    .status-box.error {
+      background: rgba(229, 57, 53, 0.1);
+      border-color: var(--danger-color);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 10px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    footer a { color: var(--accent-color); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <header>
+    <div class="brand">
+      <span class="brand-logo">NIMIQ</span>
+      <strong style="font-size: 1rem;">MyIndex</strong>
+    </div>
+    <div class="wallet-controls">
+      <div class="identicon" id="userIdenticon"></div>
+      <button class="btn-wallet" id="btnConnect">Conectar Wallet</button>
+      <a href="https://wallet.nimiq.com/" target="_blank" rel="noopener" class="btn-wallet" style="border-color: var(--accent-color); color: var(--accent-color);">Crear Wallet</a>
+      <button class="btn-wallet btn-disconnect" id="btnDisconnect">Salir</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h2>Calculadora de Poder Adquisitivo</h2>
+    <p>Convierte divisas en tiempo real y guarda el registro de tus productos en la blockchain de Nimiq.</p>
+  </section>
+
+  <!-- PASO 1 -->
+  <section class="section-card">
+    <div class="step-header">
+      <span class="step-number">1</span>
+      <span>Conversor de Criptomonedas</span>
+    </div>
+
+    <div class="conversion-inline-group">
+      <input type="number" id="amountInput" class="amount-input" value="1" min="0" step="any">
+      <button class="btn-swap" id="btnSwap" title="Invertir conversión">⇄</button>
+      <select class="global-select" id="targetAssetSelect">
+        <option value="USDT" selected>₮ USDT (Tether)</option>
+        <option value="BTC">₿ BTC (Bitcoin)</option>
+        <option value="USDC">💵 USDC (USD Coin)</option>
+      </select>
+    </div>
+
+    <input type="range" id="amountRange" min="1" max="1000000" value="1">
+
+    <div class="conversion-result">
+      <span style="font-size: 0.85rem; color: var(--text-muted);" id="conversionLabel">Resultado de Conversión</span>
+      <div class="conversion-val" id="conversionValue">Cargando CoinGecko...</div>
+    </div>
+  </section>
+
+  <!-- PASO 2 -->
+  <section class="section-card">
+    <div class="step-header">
+      <span class="step-number">2</span>
+      <span>Registro de Producto o Servicio</span>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-field">
+        <label for="productInput">Etiqueta de Producto (Máx. 12 carac.)</label>
+        <input type="text" id="productInput" placeholder="Ej: Transportex1" maxlength="12">
+      </div>
+
+      <div class="form-field">
+        <label for="countrySelect">País / Moneda Local</label>
+        <select id="countrySelect"></select>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label for="localAmount">Precio Local (<span id="currencySymbol">COP</span>)</label>
+      <input type="number" id="localAmount" placeholder="Ej: 350000" min="0" step="any">
+    </div>
+
+    <!-- Panel de Métricas Estimadas -->
+    <div class="result-panel">
+      <div>
+        <div class="metric-title" style="color: var(--accent-color);">NIMIQ ESTIMADO</div>
+        <div class="metric-value" id="valNIM" style="color: var(--accent-color);">0 NIM</div>
+      </div>
+      <div>
+        <div class="metric-title" style="color: var(--btc-color);">BITCOIN (SATS)</div>
+        <div class="metric-value" id="valSAT" style="color: var(--btc-color);">0 SATS</div>
+      </div>
+      <div>
+        <div class="metric-title" style="color: var(--usdt-color);">USD STABLE</div>
+        <div class="metric-value" id="valUSD" style="color: var(--usdt-color);">$0.00</div>
+      </div>
+    </div>
+
+    <button class="btn-anchor" id="btnSnapshot">Guardar Registro en Blockchain (0.1 NIM)</button>
+    <div class="status-box" id="statusBox"></div>
+  </section>
+
+  <!-- PASO 3 -->
+  <section class="section-card">
+    <div class="step-header">
+      <span class="step-number">3</span>
+      <span>Historial y Estadísticas</span>
+    </div>
+
+    <div class="filter-section-wrapper">
+      <div class="main-filter-tabs">
+        <button class="tab-category-btn active" id="filterTabAll">Ver Todo</button>
+        <button class="tab-category-btn" id="filterTabProducts">📦 Productos</button>
+        <button class="tab-category-btn" id="filterTabCurrencies">💱 Divisas</button>
+      </div>
+
+      <div class="chips-container" id="chipsContainer"></div>
+    </div>
+
+    <span style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;" id="chartTitle">Histórico Registrado</span>
+    <canvas id="pulseChart" height="130"></canvas>
+
+    <div class="grouped-history" id="historyList">
+      <div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 0.85rem;">
+        Conecta tu wallet para sincronizar tus transacciones registradas.
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>Desarrollado por <strong>fabioalarte</strong></div>
+    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 4px;">
+      <a href="https://x.com/fabioalarte" target="_blank" rel="noopener">X (Twitter)</a>
+      <a href="https://facebook.com/fabioalarte" target="_blank" rel="noopener">Facebook</a>
+      <a href="https://instagram.com/fabioalarte" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  const RECIPIENT_ADDRESS = 'NQ739VXGMXJR8F712K5VSRJDEEEJV1531U61';
+  const hubApi = new HubApi('https://hub.nimiq.com');
+  
+  let userAddress = null;
+  let selectedCategory = 'ALL';
+  let selectedSubFilter = 'ALL';
+  let isReverseMode = false;
+
+  const countries = [
+    { name: "Colombia", code: "COP" }, { name: "Estados Unidos", code: "USD" }, { name: "México", code: "MXN" },
+    { name: "Argentina", code: "ARS" }, { name: "Chile", code: "CLP" }, { name: "Perú", code: "PEN" },
+    { name: "Brasil", code: "BRL" }, { name: "España", code: "EUR" }, { name: "Reino Unido", code: "GBP" },
+    { name: "Venezuela", code: "VES" }, { name: "Ecuador", code: "USD" }, { name: "Guatemala", code: "GTQ" }
+  ];
+
+  let basePrices = { NIM: 0.00039, BTC: 62000, USDT: 1.00, USDC: 1.00 };
+
+  const btnConnect = document.getElementById('btnConnect');
+  const btnDisconnect = document.getElementById('btnDisconnect');
+  const amountInput = document.getElementById('amountInput');
+  const amountRange = document.getElementById('amountRange');
+  const targetSelect = document.getElementById('targetAssetSelect');
+  const btnSwap = document.getElementById('btnSwap');
+  const conversionLabel = document.getElementById('conversionLabel');
+  const conversionValue = document.getElementById('conversionValue');
+
+  const productInput = document.getElementById('productInput');
+  const localAmountInput = document.getElementById('localAmount');
+  const countrySelect = document.getElementById('countrySelect');
+  const currencySymbol = document.getElementById('currencySymbol');
+  const valNIM = document.getElementById('valNIM');
+  const valSAT = document.getElementById('valSAT');
+  const valUSD = document.getElementById('valUSD');
+
+  const chartTitle = document.getElementById('chartTitle');
+  const historyList = document.getElementById('historyList');
+  const statusBox = document.getElementById('statusBox');
+  const chipsContainer = document.getElementById('chipsContainer');
+
+  const ctx = document.getElementById('pulseChart').getContext('2d');
+  const pulseChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#8c9ba5' } },
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8c9ba5' } }
+      }
+    }
+  });
+
+  function initCountries() {
+    countrySelect.innerHTML = '';
+    countries.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.code;
+      opt.textContent = `${c.name} (${c.code})`;
+      if (c.code === 'COP') opt.selected = true;
+      countrySelect.appendChild(opt);
+    });
+  }
+
+  function getAssetInUsd(asset) {
+    if (asset === 'BTC') return basePrices.BTC;
+    return 1.00;
+  }
+
+  function updateConverter() {
+    const qty = parseFloat(amountInput.value) || 0;
+    const asset = targetSelect.value;
+    const nimInUsd = basePrices.NIM;
+    const assetInUsd = getAssetInUsd(asset);
+    const unitRate = nimInUsd / assetInUsd;
+
+    let sourceQty, sourceUnit, targetQty, targetUnit;
+
+    if (!isReverseMode) {
+      sourceQty = qty;
+      sourceUnit = 'NIM';
+      targetQty = qty * unitRate;
+      targetUnit = asset;
+    } else {
+      sourceQty = qty;
+      sourceUnit = asset;
+      targetQty = qty / unitRate;
+      targetUnit = 'NIM';
+    }
+
+    conversionLabel.innerText = `${sourceQty.toLocaleString()} ${sourceUnit} equivale a:`;
+    conversionValue.innerText = `${targetQty.toLocaleString(undefined, {maximumFractionDigits: 6})} ${targetUnit}`;
+
+    return { sourceQty, sourceUnit, targetQty, targetUnit, unitRate };
+  }
+
+  function getCurrentCalculations() {
+    const localVal = parseFloat(localAmountInput.value) || 0;
+    const rawProduct = productInput.value.trim().toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+    const item = rawProduct || null;
+    const curr = countrySelect.value;
+
+    let usdEst = localVal;
+    if (curr === 'COP') usdEst = localVal / 4150;
+    else if (curr === 'MXN') usdEst = localVal / 19.5;
+    else if (curr === 'ARS') usdEst = localVal / 950;
+    else if (curr === 'EUR') usdEst = localVal * 1.08;
+
+    const nimQty = usdEst > 0 ? usdEst / basePrices.NIM : 0;
+    const btcQty = usdEst > 0 ? usdEst / basePrices.BTC : 0;
+    const satsQty = Math.round(btcQty * 100000000);
+
+    return { localVal, item, curr, nimQty, satsQty, usdEst };
+  }
+
+  function updateCalculations() {
+    currencySymbol.textContent = countrySelect.value;
+    const calc = getCurrentCalculations();
+    valNIM.innerText = `${calc.nimQty.toLocaleString(undefined, {maximumFractionDigits:2})} NIM`;
+    valSAT.innerText = `${calc.satsQty.toLocaleString()} SATS`;
+    valUSD.innerText = `$${calc.usdEst.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  }
+
+  amountInput.addEventListener('input', (e) => { amountRange.value = e.target.value; updateConverter(); });
+  amountRange.addEventListener('input', (e) => { amountInput.value = e.target.value; updateConverter(); });
+  btnSwap.addEventListener('click', () => { isReverseMode = !isReverseMode; updateConverter(); });
+  targetSelect.addEventListener('change', updateConverter);
+
+  productInput.addEventListener('input', updateCalculations);
+  localAmountInput.addEventListener('input', updateCalculations);
+  countrySelect.addEventListener('change', updateCalculations);
+
+  btnConnect.addEventListener('click', async () => {
+    try {
+      const option = await hubApi.chooseAddress({ appName: 'NIMIQ MyIndex' });
+      userAddress = option.address;
+      btnConnect.innerText = `${userAddress.substring(0, 4)}...${userAddress.substring(userAddress.length - 4)}`;
+      btnDisconnect.style.display = 'inline-block';
+      renderIdenticon(userAddress);
+      loadSavedHistory();
+    } catch (e) { console.error(e); }
+  });
+
+  btnDisconnect.addEventListener('click', () => {
+    userAddress = null;
+    btnConnect.innerText = "Conectar Wallet";
+    btnDisconnect.style.display = 'none';
+    document.getElementById('userIdenticon').style.display = 'none';
+    renderHistoryItems([]);
+  });
+
+  function renderIdenticon(addr) {
+    const box = document.getElementById('userIdenticon');
+    if (window.NimiqIdenticons) {
+      box.innerHTML = NimiqIdenticons.renderSvg(addr);
+      box.style.display = 'inline-block';
+    }
+  }
+
+  // PAYLOAD DEPURADO Y OPTIMIZADO CON PARIDAD TETHER + BTC (SATS)
+  document.getElementById('btnSnapshot').addEventListener('click', async () => {
+    statusBox.style.display = 'block';
+    statusBox.classList.remove('error');
+
+    if (!userAddress) {
+      statusBox.classList.add('error');
+      statusBox.textContent = 'Conecta tu Wallet Nimiq para realizar el registro.';
+      return;
+    }
+
+    const p1Qty = parseFloat(amountInput.value);
+    const hasValidPart1 = !isNaN(p1Qty) && p1Qty > 0;
+
+    const p2Product = productInput.value.trim();
+    const p2Amount = parseFloat(localAmountInput.value);
+    const hasValidPart2 = p2Product.length > 0 && !isNaN(p2Amount) && p2Amount > 0;
+
+    if (!hasValidPart1 && !hasValidPart2) {
+      statusBox.classList.add('error');
+      statusBox.textContent = 'Ingresa datos válidos en al menos una sección.';
+      return;
+    }
+
+    const convCalc = updateConverter();
+    const calcP2 = getCurrentCalculations();
+    
+    // Cálculo de Satoshis por 1 NIM para la paridad BTC
+    const nimInBtc = basePrices.NIM / basePrices.BTC;
+    const nimInSats = Math.round(nimInBtc * 100000000);
+    
+    // Payload Depurado: MX | Paridad Tether | Paridad Satoshis | Producto | Moneda Local
+    let payload = `MX`;
+
+    if (hasValidPart1) {
+      payload += `|${convCalc.sourceQty}${convCalc.sourceUnit}->${convCalc.targetQty < 1 ? convCalc.targetQty.toFixed(4) : Math.round(convCalc.targetQty)}${convCalc.targetUnit}`;
+    }
+
+    payload += `|S:${nimInSats}`;
+
+    if (hasValidPart2) {
+      payload += `|T:${calcP2.item.substring(0, 12)}|${calcP2.localVal}${calcP2.curr}`;
+    }
+
+    const encodedPayload = new TextEncoder().encode(payload);
+    if (encodedPayload.length > 64) {
+      statusBox.classList.add('error');
+      statusBox.textContent = `El registro supera los 64 bytes permitidos (${encodedPayload.length}/64 bytes). Reduce la etiqueta del producto.`;
+      return;
+    }
+
+    try {
+      statusBox.textContent = 'Procesando en la red Nimiq...';
+
+      const result = await hubApi.checkout({
+        appName: 'NIMIQ MyIndex',
+        recipient: RECIPIENT_ADDRESS,
+        value: 10000,
+        extraData: encodedPayload,
+        sender: userAddress
+      });
+
+      if (result && result.hash) {
+        statusBox.textContent = `¡Guardado en la blockchain! TX: ${result.hash.substring(0, 10)}...`;
+        saveHistoryItem({ address: userAddress, hash: result.hash, payload, timestamp: Date.now() });
+        loadSavedHistory();
+      }
+    } catch (e) {
+      statusBox.classList.add('error');
+      statusBox.textContent = 'Transacción no completada.';
+    }
+  });
+
+  function saveHistoryItem(record) {
+    const records = JSON.parse(localStorage.getItem(`nimiq_myindex_${userAddress}`) || '[]');
+    records.unshift(record);
+    localStorage.setItem(`nimiq_myindex_${userAddress}`, JSON.stringify(records));
+  }
+
+  function loadSavedHistory() {
+    if (!userAddress) return;
+    renderFilterSubmenu();
+    renderHistoryAndChart();
+  }
+
+  function parsePayload(payloadStr) {
+    try {
+      const parts = payloadStr.split('|');
+      if (parts[0] !== 'MX') return null;
+      
+      let item = null;
+      let conv = null;
+      let sats = null;
+
+      parts.forEach(p => {
+        if (p.startsWith('T:')) item = p.replace('T:', '');
+        if (p.includes('->')) conv = p;
+        if (p.startsWith('S:')) sats = parseInt(p.replace('S:', ''));
+      });
+
+      const type = item ? 'PRODUCT' : 'CURRENCY';
+      return { type, item, conv, sats };
+    } catch (e) { return null; }
+  }
+
+  document.getElementById('filterTabAll').onclick = () => setCategory('ALL');
+  document.getElementById('filterTabProducts').onclick = () => setCategory('PRODUCTS');
+  document.getElementById('filterTabCurrencies').onclick = () => setCategory('CURRENCIES');
+
+  function setCategory(cat) {
+    selectedCategory = cat;
+    selectedSubFilter = 'ALL';
+
+    document.getElementById('filterTabAll').className = `tab-category-btn ${cat === 'ALL' ? 'active' : ''}`;
+    document.getElementById('filterTabProducts').className = `tab-category-btn ${cat === 'PRODUCTS' ? 'active' : ''}`;
+    document.getElementById('filterTabCurrencies').className = `tab-category-btn ${cat === 'CURRENCIES' ? 'active' : ''}`;
+
+    renderFilterSubmenu();
+    renderHistoryAndChart();
+  }
+
+  function renderFilterSubmenu() {
+    chipsContainer.innerHTML = '';
+    if (!userAddress) return;
+
+    const records = JSON.parse(localStorage.getItem(`nimiq_myindex_${userAddress}`) || '[]');
+    const productsSet = new Set();
+    const currenciesSet = new Set();
+
+    records.forEach(r => {
+      const parsed = parsePayload(r.payload);
+      if (parsed) {
+        if (parsed.item) productsSet.add(parsed.item);
+        if (parsed.conv) {
+          const parts = parsed.conv.split('->');
+          if (parts.length === 2) {
+            const asset = parts[1].replace(/[0-9.]/g, '');
+            currenciesSet.add(asset);
+          }
+        }
+      }
+    });
+
+    if (selectedCategory === 'ALL') {
+      chipsContainer.style.display = 'none';
+      return;
+    }
+
+    chipsContainer.style.display = 'flex';
+    const currentSet = selectedCategory === 'PRODUCTS' ? productsSet : currenciesSet;
+
+    const allChip = document.createElement('button');
+    allChip.className = `chip-btn ${selectedSubFilter === 'ALL' ? 'active' : ''}`;
+    allChip.textContent = `Todos (${selectedCategory === 'PRODUCTS' ? 'Productos' : 'Divisas'})`;
+    allChip.onclick = () => { selectedSubFilter = 'ALL'; renderFilterSubmenu(); renderHistoryAndChart(); };
+    chipsContainer.appendChild(allChip);
+
+    currentSet.forEach(val => {
+      const chip = document.createElement('button');
+      chip.className = `chip-btn ${selectedSubFilter === val ? 'active' : ''}`;
+      chip.textContent = val;
+      chip.onclick = () => { selectedSubFilter = val; renderFilterSubmenu(); renderHistoryAndChart(); };
+      chipsContainer.appendChild(chip);
+    });
+  }
+
+  function renderHistoryAndChart() {
+    if (!userAddress) return;
+    const records = JSON.parse(localStorage.getItem(`nimiq_myindex_${userAddress}`) || '[]');
+    
+    const filteredRecords = records.filter(r => {
+      const parsed = parsePayload(r.payload);
+      if (!parsed) return false;
+
+      if (selectedCategory === 'PRODUCTS') {
+        if (parsed.type !== 'PRODUCT') return false;
+        if (selectedSubFilter !== 'ALL' && parsed.item !== selectedSubFilter) return false;
+      } else if (selectedCategory === 'CURRENCIES') {
+        if (parsed.type !== 'CURRENCY') return false;
+        if (selectedSubFilter !== 'ALL' && !parsed.conv.includes(selectedSubFilter)) return false;
+      }
+
+      return true;
+    });
+
+    renderHistoryItems(filteredRecords);
+    renderDynamicChart(filteredRecords);
+  }
+
+  function renderHistoryItems(items) {
+    if (items.length === 0) {
+      historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 10px; font-size: 0.85rem;">No hay registros en esta categoría.</div>`;
+      return;
+    }
+
+    historyList.innerHTML = '';
+    items.forEach(item => {
+      const parsed = parsePayload(item.payload);
+      const div = document.createElement('div');
+      div.className = 'group-item';
+      
+      const badgeTitle = parsed.type === 'PRODUCT' ? `📦 ${parsed.item}` : `💱 DIVISA`;
+
+      div.innerHTML = `
+        <div class="group-item-info">
+          <span class="group-item-title">${badgeTitle}</span>
+          <span class="group-item-sub">${item.payload}</span>
+        </div>
+        <div>
+          <a href="https://nimiq.watch/#${item.hash}" target="_blank" rel="noopener" style="color:var(--accent-color); font-size: 0.75rem; text-decoration: none; font-weight: bold;">Explorar TX</a>
+        </div>
+      `;
+      historyList.appendChild(div);
+    });
+  }
+
+  function renderDynamicChart(records) {
+    const parsedData = records
+      .map(r => {
+        const parsed = parsePayload(r.payload);
+        return parsed ? { ...parsed, hash: r.hash } : null;
+      })
+      .filter(p => p !== null)
+      .reverse();
+
+    if (parsedData.length === 0) {
+      chartTitle.innerText = "Sin datos para la selección actual";
+      pulseChart.data.labels = [];
+      pulseChart.data.datasets = [];
+      pulseChart.update();
+      return;
+    }
+
+    const labels = parsedData.map((d, idx) => `#${idx + 1}`);
+    const dataPoints = parsedData.map(d => d.sats || 0);
+
+    let themeColor = '#e9b213';
+    let bgColor = 'rgba(233, 178, 19, 0.1)';
+
+    if (selectedCategory === 'PRODUCTS') {
+      themeColor = '#2ebd85';
+      bgColor = 'rgba(46, 189, 133, 0.1)';
+      chartTitle.innerText = `Tendencia Registrada (Satoshis por NIM)`;
+    } else if (selectedCategory === 'CURRENCIES') {
+      themeColor = '#f7931a';
+      bgColor = 'rgba(247, 147, 26, 0.1)';
+      chartTitle.innerText = `Paridad Registrada con Bitcoin (SATS)`;
+    } else {
+      chartTitle.innerText = `Paridad On-Chain (1 NIM en Satoshis)`;
+    }
+
+    pulseChart.data.labels = labels;
+    pulseChart.data.datasets = [{
+      label: 'Satoshis por NIM',
+      data: dataPoints,
+      borderColor: themeColor,
+      backgroundColor: bgColor,
+      borderWidth: 2,
+      fill: true,
+      tension: 0.2
+    }];
+    pulseChart.update();
+  }
+
+  async function initMarket() {
+    try {
+      const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=nimiq-2,bitcoin,tether&vs_currencies=usd');
+      const data = await res.json();
+      if (data['nimiq-2'] && data['nimiq-2'].usd) basePrices.NIM = data['nimiq-2'].usd;
+      if (data['bitcoin'] && data['bitcoin'].usd) basePrices.BTC = data['bitcoin'].usd;
+      if (data['tether'] && data['tether'].usd) basePrices.USDT = data['tether'].usd;
+    } catch (e) {
+      console.warn("Mercado operando con tarifas base de reserva.");
+    }
+    initCountries();
+    updateConverter();
+    updateCalculations();
+  }
+
+  initMarket();
+</script>
+</body>
+</html>
