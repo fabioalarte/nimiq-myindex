@@ -925,12 +925,12 @@
     return `${formatted}${asset}`;
   }
 
-  function getSafeSatsPerNim() {
-    const nimUsd = parseFloat(basePrices.NIM) || 0.00039;
-    if (nimUsd <= 0) return 2564;
+  // S: Definido estrictamente como Satoshis por 1 Dólar (Estándar temporal global)
+  function getSatsPerUsd() {
     const btcUsd = parseFloat(basePrices.BTC) || 62000;
-    const satsPerNim = Math.round((nimUsd / btcUsd) * 100000000);
-    return isNaN(satsPerNim) || satsPerNim <= 0 ? 2564 : satsPerNim;
+    if (btcUsd <= 0) return 1612;
+    const satsPerUsd = Math.round(100000000 / btcUsd);
+    return isNaN(satsPerUsd) || satsPerUsd <= 0 ? 1612 : satsPerUsd;
   }
 
   function formatDate(ts) {
@@ -1129,7 +1129,7 @@
 
     const convCalc = updateConverter();
     const calcP2 = getCurrentCalculations();
-    const satsPerNim = getSafeSatsPerNim();
+    const satsUsd = getSatsPerUsd();
 
     let payload = `MX`;
 
@@ -1137,7 +1137,8 @@
     const tgtStr = formatCompactAmount(convCalc.targetQty, convCalc.targetUnit);
     payload += `|${srcStr}->${tgtStr}`;
 
-    payload += `|S:${satsPerNim}`;
+    // S: Almacena los sats por dólar como estándar temporal mundial
+    payload += `|S:${satsUsd}`;
 
     if (calcP2.item && calcP2.localVal > 0) {
       payload += `|P:${calcP2.item}|${calcP2.localVal}${calcP2.curr}`;
@@ -1196,7 +1197,7 @@
       
       let itemRaw = null;
       let conv = null;
-      let sats = null;
+      let satsUsd = null;
       let fiatVal = 0;
       let fiatCurr = 'USD';
 
@@ -1211,7 +1212,7 @@
           }
         }
         if (p.includes('->')) conv = p;
-        if (p.startsWith('S:')) sats = parseInt(p.replace('S:', ''), 10);
+        if (p.startsWith('S:')) satsUsd = parseInt(p.replace('S:', ''), 10);
       });
 
       let formattedTitle = '📦 Registro';
@@ -1230,7 +1231,7 @@
       }
 
       const type = itemRaw ? 'PRODUCT' : 'CURRENCY';
-      return { type, item: formattedTitle, conv, sats: isNaN(sats) ? 0 : sats, fiatVal, fiatCurr };
+      return { type, item: formattedTitle, conv, satsUsd: isNaN(satsUsd) ? 0 : satsUsd, fiatVal, fiatCurr };
     } catch (e) { return null; }
   }
 
@@ -1382,15 +1383,14 @@
 
     const labels = parsedData.map(d => formatDateShort(d.timestamp));
 
-    // Uso riguroso de null en vez de rellenar con valores falsos (Observación 3 de Claude)
-    const rawNimPoints = parsedData.map(d => (d.sats && d.sats > 0) ? d.sats : null);
+    // Usamos satsUsd (estándar global) o null estricto si no existe, evitando datos ficticios
+    const rawSatsUsdPoints = parsedData.map(d => (d.satsUsd && d.satsUsd > 0) ? d.satsUsd : null);
     const rawLocalPoints = parsedData.map(d => d.fiatVal || 0);
 
-    // Encontrar bases válidas para Base 100 evitando división por cero o nulos
-    let baseNim = rawNimPoints.find(val => val !== null) || 1;
+    let baseSatsUsd = rawSatsUsdPoints.find(val => val !== null) || 1;
     let baseLocal = rawLocalPoints.find(val => val > 0) || 1;
 
-    const nimBase100 = rawNimPoints.map(val => (val !== null) ? parseFloat(((val / baseNim) * 100).toFixed(2)) : null);
+    const satsUsdBase100 = rawSatsUsdPoints.map(val => (val !== null) ? parseFloat(((val / baseSatsUsd) * 100).toFixed(2)) : null);
     const localBase100 = rawLocalPoints.map(val => val > 0 ? parseFloat(((val / baseLocal) * 100).toFixed(2)) : null);
 
     const activeCurrency = selectedSubFilter !== 'ALL' && selectedCategory === 'CURRENCIES' ? selectedSubFilter : 'Inflación Relativa';
@@ -1399,14 +1399,14 @@
     pulseChart.data.labels = labels;
     pulseChart.data.datasets = [
       {
-        label: 'Tasa Cripto (Base 100)',
-        data: nimBase100,
+        label: 'Estándar Global (Sats/USD Base 100)',
+        data: satsUsdBase100,
         borderColor: '#e9b213',
         backgroundColor: 'rgba(233, 178, 19, 0.15)',
         borderWidth: 2,
         fill: true,
         tension: 0.25,
-        spanGaps: false // Corta la línea si falta el dato en vez de unirlo de forma falsa
+        spanGaps: false
       },
       {
         label: 'Precio Registrado (Base 100)',
@@ -1424,7 +1424,6 @@
   }
 
   async function fetchMarketData() {
-    // 1. Obtener precios cripto frescos
     try {
       const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=nimiq-2,bitcoin,tether,usd-coin&vs_currencies=usd');
       const data = await res.json();
@@ -1436,7 +1435,6 @@
       console.warn("Mercado cripto operando con tarifas base de reserva.");
     }
 
-    // 2. Obtener tasas fiat con indicador de respaldo en caso de fallo (Observación 5)
     try {
       const fiatRes = await fetch('https://open.er-api.com/v6/latest/USD');
       const fiatData = await fiatRes.json();
@@ -1470,7 +1468,6 @@
     await fetchMarketData();
     checkAndRestoreSession();
 
-    // Actualización automática silenciosa cada 3 minutos (Observación 4 de Claude)
     setInterval(async () => {
       await fetchMarketData();
     }, 3 * 60 * 1000);
