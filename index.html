@@ -7,6 +7,7 @@
   Licencia: MIT License (Código Libre con Atribución Requerida)
   Repositorio & Firma: Nimiq On-Chain Protocol ID "MX"
   Contacto / Redes: 
+    - GitHub: https://github.com/fabioalarte
     - Twitter/X: https://x.com/fabioalarte
     - Facebook: https://facebook.com/fabioalarte
     - Instagram: https://instagram.com/fabioalarte
@@ -244,6 +245,54 @@
       gap: 8px;
     }
     .form-field label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
+
+    /* Estilos Modal de Consentimiento Real */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 12, 18, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .modal-card {
+      background: var(--card-bg);
+      border: 1px solid var(--accent-color);
+      border-radius: 16px;
+      max-width: 440px;
+      width: 100%;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .modal-card h3 { color: var(--accent-color); font-size: 1.1rem; }
+    .modal-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+    .modal-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+    .modal-checkbox-row input { accent-color: var(--accent-color); width: 16px; height: 16px; cursor: pointer; }
+    .modal-btn {
+      background: var(--accent-color);
+      color: #000;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: opacity 0.2s;
+    }
+    .modal-btn:hover { opacity: 0.9; }
 
     .category-chips-bar {
       display: flex;
@@ -496,6 +545,19 @@
 </head>
 <body>
 
+<!-- MODAL DE CONSENTIMIENTO EXPRESO -->
+<div class="modal-overlay" id="privacyModal">
+  <div class="modal-card">
+    <h3>Consentimiento de Privacidad Inmutable</h3>
+    <p>Estás a punto de anclar un registro en la blockchain pública de Nimiq. Esta información quedará grabada de forma permanente, vinculada a tu dirección, y podrá ser consultada por cualquier nodo o explorador de bloques.</p>
+    <label class="modal-checkbox-row">
+      <input type="checkbox" id="acceptPrivacyCheck">
+      <span>Entiendo y acepto que este registro es público e inmutable.</span>
+    </label>
+    <button class="modal-btn" id="btnConfirmPrivacy" disabled>Continuar y Registrar</button>
+  </div>
+</div>
+
 <div class="app-container">
   
   <header>
@@ -617,7 +679,7 @@
     </div>
 
     <div class="time-filter-bar">
-      <span style="font-size: 0.8rem; color: var(--text-muted);" id="chartTitle">Comparativa Inflación Local vs Cripto</span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);" id="chartTitle">Evolución en Base 100 (% de cambio relativo)</span>
       <div class="time-chips-container">
         <button class="time-chip-btn" onclick="setTimeRange('1D', event)">1D</button>
         <button class="time-chip-btn" onclick="setTimeRange('1W', event)">1W</button>
@@ -639,6 +701,7 @@
   <footer>
     <div>Desarrollado por <strong>fabioalarte</strong></div>
     <div style="display: flex; justify-content: center; gap: 12px; margin-top: 4px;">
+      <a href="https://github.com/fabioalarte" target="_blank" rel="noopener">GitHub</a>
       <a href="https://x.com/fabioalarte" target="_blank" rel="noopener">X (Twitter)</a>
       <a href="https://facebook.com/fabioalarte" target="_blank" rel="noopener">Facebook</a>
       <a href="https://instagram.com/fabioalarte" target="_blank" rel="noopener">Instagram</a>
@@ -668,6 +731,7 @@
   
   const SESSION_KEY = 'nimiq_myindex_active_address';
   const SESSION_TIME_KEY = 'nimiq_myindex_session_timestamp';
+  const PRIVACY_ACCEPTED_KEY = 'nimiq_myindex_privacy_accepted';
   const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
   const categoryUnits = {
@@ -729,7 +793,14 @@
   const statusBox = document.getElementById('statusBox');
   const chipsContainer = document.getElementById('chipsContainer');
 
-  // Inicialización de Gráfica Dual (Moneda Local vs Cripto)
+  const privacyModal = document.getElementById('privacyModal');
+  const acceptPrivacyCheck = document.getElementById('acceptPrivacyCheck');
+  const btnConfirmPrivacy = document.getElementById('btnConfirmPrivacy');
+
+  acceptPrivacyCheck.addEventListener('change', (e) => {
+    btnConfirmPrivacy.disabled = !e.target.checked;
+  });
+
   const ctx = document.getElementById('pulseChart').getContext('2d');
   const pulseChart = new Chart(ctx, {
     type: 'line',
@@ -743,20 +814,9 @@
       scales: {
         x: { grid: { display: false }, ticks: { color: '#8c9ba5', maxRotation: 45, minRotation: 0 } },
         y: { 
-          type: 'linear',
-          display: true,
-          position: 'left',
-          title: { display: true, text: 'NIM por USD', color: '#e9b213' },
+          title: { display: true, text: 'Variación Relativa (Base 100)', color: '#e9b213' },
           grid: { color: 'rgba(255,255,255,0.05)' }, 
-          ticks: { color: '#e9b213' }
-        },
-        y1: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          title: { display: true, text: 'Precio Local', color: '#00bcd4' },
-          grid: { drawOnChartArea: false },
-          ticks: { color: '#00bcd4' }
+          ticks: { color: '#e9b213', callback: function(value) { return value + '%'; } }
         }
       }
     }
@@ -867,8 +927,9 @@
   function getSafeSatsPerNim() {
     const nimUsd = parseFloat(basePrices.NIM) || 0.00039;
     if (nimUsd <= 0) return 2564;
-    const nimPerUsd = Math.round(1 / nimUsd);
-    return isNaN(nimPerUsd) || nimPerUsd <= 0 ? 2564 : nimPerUsd;
+    const btcUsd = parseFloat(basePrices.BTC) || 62000;
+    const satsPerNim = Math.round((nimUsd / btcUsd) * 100000000);
+    return isNaN(satsPerNim) || satsPerNim <= 0 ? 2564 : satsPerNim;
   }
 
   function formatDate(ts) {
@@ -1033,7 +1094,8 @@
     renderHistoryAndChart();
   }
 
-  btnSnapshot.addEventListener('click', async () => {
+  // Interceptamos el clic para mostrar el modal si no ha aceptado
+  btnSnapshot.addEventListener('click', () => {
     statusBox.style.display = 'block';
     statusBox.classList.remove('error');
 
@@ -1042,6 +1104,28 @@
       statusBox.textContent = 'Conecta tu Wallet Nimiq para realizar el registro.';
       return;
     }
+
+    const hasAcceptedPrivacy = localStorage.getItem(PRIVACY_ACCEPTED_KEY);
+    if (!hasAcceptedPrivacy) {
+      statusBox.style.display = 'none';
+      acceptPrivacyCheck.checked = false;
+      btnConfirmPrivacy.disabled = true;
+      privacyModal.style.display = 'flex';
+      return;
+    }
+
+    executeBlockchainSnapshot();
+  });
+
+  btnConfirmPrivacy.addEventListener('click', () => {
+    localStorage.setItem(PRIVACY_ACCEPTED_KEY, 'true');
+    privacyModal.style.display = 'none';
+    executeBlockchainSnapshot();
+  });
+
+  async function executeBlockchainSnapshot() {
+    statusBox.style.display = 'block';
+    statusBox.classList.remove('error');
 
     const convCalc = updateConverter();
     const calcP2 = getCurrentCalculations();
@@ -1102,7 +1186,7 @@
     } finally {
       btnSnapshot.disabled = false;
     }
-  });
+  }
 
   function parsePayload(payloadStr) {
     try {
@@ -1298,36 +1382,40 @@
 
     const labels = parsedData.map(d => formatDateShort(d.timestamp));
 
-    // Dataset 1: Tasa Nim por USD / Sats
-    const nimCryptoPoints = parsedData.map(d => {
+    const rawNimPoints = parsedData.map(d => {
       const rawVal = d.sats || 0;
       return rawVal <= 0 ? 2564 : rawVal; 
     });
 
-    // Dataset 2: Precios Locales Registrados
-    const localPricePoints = parsedData.map(d => d.fiatVal || 0);
+    const rawLocalPoints = parsedData.map(d => d.fiatVal || 0);
 
-    chartTitle.innerText = `Inflación Comparada: Valor Cripto vs Precio Local`;
+    // Normalización a Base 100 (% de cambio relativo respecto al primer punto)
+    const baseNim = rawNimPoints[0] || 1;
+    const baseLocal = rawLocalPoints[0] || 1;
+
+    const nimBase100 = rawNimPoints.map(val => parseFloat(((val / baseNim) * 100).toFixed(2)));
+    const localBase100 = rawLocalPoints.map(val => baseLocal > 0 ? parseFloat(((val / baseLocal) * 100).toFixed(2)) : 100);
+
+    const activeCurrency = selectedSubFilter !== 'ALL' && selectedCategory === 'CURRENCIES' ? selectedSubFilter : 'Inflación Relativa';
+    chartTitle.innerText = `Evolución en Base 100 (${activeCurrency})`;
 
     pulseChart.data.labels = labels;
     pulseChart.data.datasets = [
       {
-        label: 'Tasa NIM/USD (Sats/NIM)',
-        data: nimCryptoPoints,
+        label: 'Tasa Cripto (Base 100)',
+        data: nimBase100,
         borderColor: '#e9b213',
         backgroundColor: 'rgba(233, 178, 19, 0.15)',
         borderWidth: 2,
-        yAxisID: 'y',
         fill: true,
         tension: 0.25
       },
       {
-        label: 'Precio Local ($)',
-        data: localPricePoints,
+        label: 'Precio Registrado (Base 100)',
+        data: localBase100,
         borderColor: '#00bcd4',
         backgroundColor: 'rgba(0, 188, 212, 0.15)',
         borderWidth: 2,
-        yAxisID: 'y1',
         fill: false,
         tension: 0.25
       }
@@ -1345,8 +1433,28 @@
       if (data['tether']?.usd) basePrices.USDT = data['tether'].usd;
       if (data['usd-coin']?.usd) basePrices.USDC = data['usd-coin'].usd;
     } catch (e) {
-      console.warn("Mercado operando con tarifas base de reserva.");
+      console.warn("Mercado cripto operando con tarifas base de reserva.");
     }
+
+    try {
+      const fiatRes = await fetch('https://open.er-api.com/v6/latest/USD');
+      const fiatData = await fiatRes.json();
+      if (fiatData && fiatData.rates) {
+        if (fiatData.rates.COP) fiatRates.COP = fiatData.rates.COP;
+        if (fiatData.rates.MXN) fiatRates.MXN = fiatData.rates.MXN;
+        if (fiatData.rates.ARS) fiatRates.ARS = fiatData.rates.ARS;
+        if (fiatData.rates.EUR) fiatRates.EUR = fiatData.rates.EUR;
+        if (fiatData.rates.GBP) fiatRates.GBP = fiatData.rates.GBP;
+        if (fiatData.rates.BRL) fiatRates.BRL = fiatData.rates.BRL;
+        if (fiatData.rates.CLP) fiatRates.CLP = fiatData.rates.CLP;
+        if (fiatData.rates.PEN) fiatRates.PEN = fiatData.rates.PEN;
+        if (fiatData.rates.VES) fiatRates.VES = fiatData.rates.VES;
+        if (fiatData.rates.GTQ) fiatRates.GTQ = fiatData.rates.GTQ;
+      }
+    } catch (e) {
+      console.warn("Tasas fiat usando valores de respaldo local.");
+    }
+
     initCountries();
     renderUnitChips('A');
     updateConverter();
