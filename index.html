@@ -632,7 +632,7 @@
       </div>
 
       <div class="form-field">
-        <label for="countrySelect">País / Moneda Local</label>
+        <label for="countrySelect">País / Moneda Local <span id="fiatRateStatus" style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal;"></span></label>
         <select id="countrySelect"></select>
       </div>
     </div>
@@ -784,6 +784,7 @@
   const localAmountInput = document.getElementById('localAmount');
   const countrySelect = document.getElementById('countrySelect');
   const currencySymbol = document.getElementById('currencySymbol');
+  const fiatRateStatus = document.getElementById('fiatRateStatus');
   const valNIM = document.getElementById('valNIM');
   const valSAT = document.getElementById('valSAT');
   const valUSD = document.getElementById('valUSD');
@@ -1094,7 +1095,6 @@
     renderHistoryAndChart();
   }
 
-  // Interceptamos el clic para mostrar el modal si no ha aceptado
   btnSnapshot.addEventListener('click', () => {
     statusBox.style.display = 'block';
     statusBox.classList.remove('error');
@@ -1382,19 +1382,16 @@
 
     const labels = parsedData.map(d => formatDateShort(d.timestamp));
 
-    const rawNimPoints = parsedData.map(d => {
-      const rawVal = d.sats || 0;
-      return rawVal <= 0 ? 2564 : rawVal; 
-    });
-
+    // Uso riguroso de null en vez de rellenar con valores falsos (Observación 3 de Claude)
+    const rawNimPoints = parsedData.map(d => (d.sats && d.sats > 0) ? d.sats : null);
     const rawLocalPoints = parsedData.map(d => d.fiatVal || 0);
 
-    // Normalización a Base 100 (% de cambio relativo respecto al primer punto)
-    const baseNim = rawNimPoints[0] || 1;
-    const baseLocal = rawLocalPoints[0] || 1;
+    // Encontrar bases válidas para Base 100 evitando división por cero o nulos
+    let baseNim = rawNimPoints.find(val => val !== null) || 1;
+    let baseLocal = rawLocalPoints.find(val => val > 0) || 1;
 
-    const nimBase100 = rawNimPoints.map(val => parseFloat(((val / baseNim) * 100).toFixed(2)));
-    const localBase100 = rawLocalPoints.map(val => baseLocal > 0 ? parseFloat(((val / baseLocal) * 100).toFixed(2)) : 100);
+    const nimBase100 = rawNimPoints.map(val => (val !== null) ? parseFloat(((val / baseNim) * 100).toFixed(2)) : null);
+    const localBase100 = rawLocalPoints.map(val => val > 0 ? parseFloat(((val / baseLocal) * 100).toFixed(2)) : null);
 
     const activeCurrency = selectedSubFilter !== 'ALL' && selectedCategory === 'CURRENCIES' ? selectedSubFilter : 'Inflación Relativa';
     chartTitle.innerText = `Evolución en Base 100 (${activeCurrency})`;
@@ -1408,7 +1405,8 @@
         backgroundColor: 'rgba(233, 178, 19, 0.15)',
         borderWidth: 2,
         fill: true,
-        tension: 0.25
+        tension: 0.25,
+        spanGaps: false // Corta la línea si falta el dato en vez de unirlo de forma falsa
       },
       {
         label: 'Precio Registrado (Base 100)',
@@ -1417,14 +1415,16 @@
         backgroundColor: 'rgba(0, 188, 212, 0.15)',
         borderWidth: 2,
         fill: false,
-        tension: 0.25
+        tension: 0.25,
+        spanGaps: false
       }
     ];
 
     pulseChart.update();
   }
 
-  async function initMarket() {
+  async function fetchMarketData() {
+    // 1. Obtener precios cripto frescos
     try {
       const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=nimiq-2,bitcoin,tether,usd-coin&vs_currencies=usd');
       const data = await res.json();
@@ -1436,6 +1436,7 @@
       console.warn("Mercado cripto operando con tarifas base de reserva.");
     }
 
+    // 2. Obtener tasas fiat con indicador de respaldo en caso de fallo (Observación 5)
     try {
       const fiatRes = await fetch('https://open.er-api.com/v6/latest/USD');
       const fiatData = await fiatRes.json();
@@ -1450,16 +1451,29 @@
         if (fiatData.rates.PEN) fiatRates.PEN = fiatData.rates.PEN;
         if (fiatData.rates.VES) fiatRates.VES = fiatData.rates.VES;
         if (fiatData.rates.GTQ) fiatRates.GTQ = fiatData.rates.GTQ;
+        fiatRateStatus.textContent = "(Tasas en vivo)";
+        fiatRateStatus.style.color = "var(--nq-green)";
       }
     } catch (e) {
       console.warn("Tasas fiat usando valores de respaldo local.");
+      fiatRateStatus.textContent = "(⚠️ Tasas de respaldo)";
+      fiatRateStatus.style.color = "var(--danger-color)";
     }
 
-    initCountries();
-    renderUnitChips('A');
     updateConverter();
     updateCalculations();
+  }
+
+  async function initMarket() {
+    initCountries();
+    renderUnitChips('A');
+    await fetchMarketData();
     checkAndRestoreSession();
+
+    // Actualización automática silenciosa cada 3 minutos (Observación 4 de Claude)
+    setInterval(async () => {
+      await fetchMarketData();
+    }, 3 * 60 * 1000);
   }
 
   initMarket();
